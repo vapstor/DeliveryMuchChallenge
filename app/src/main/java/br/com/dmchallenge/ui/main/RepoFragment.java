@@ -5,6 +5,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,6 +18,7 @@ import java.util.ArrayList;
 import br.com.dmchallenge.adapter.RepoAdapter;
 import br.com.dmchallenge.databinding.RepoFragmentBinding;
 import br.com.dmchallenge.model.Repo;
+import br.com.dmchallenge.utils.ItemClickSupport;
 import dagger.hilt.android.AndroidEntryPoint;
 
 @AndroidEntryPoint
@@ -36,26 +38,30 @@ public class RepoFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         binding = RepoFragmentBinding.inflate(inflater, container, false);
-        View view = binding.getRoot();
-        return view;
+        return binding.getRoot();
     }
 
     @Override
-    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
         repoViewModel = new ViewModelProvider(this).get(RepoViewModel.class);
+
+        initRecyclerView();
+        observeData();
+        setUpItemTouchHelper();
     }
 
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        binding = null;
+    private void setUpItemTouchHelper() {
+        ItemClickSupport.addTo(binding.reposRecyclerView).setOnItemClickListener((recyclerView, position, v) -> {
+            Toast.makeText(getContext(), "Elemento " + position + " Clidado!", Toast.LENGTH_SHORT).show();
+        });
     }
 
     private void observeData() {
-        repoViewModel.getReposList().observe(getViewLifecycleOwner(), pokemons -> {
-            Log.e(TAG, "onChanged: " + pokemons.size());
-            adapter.updateList(pokemons);
+        repoViewModel.getReposList().observe(getViewLifecycleOwner(), repos -> {
+            Log.e(TAG, "onChanged: " + repos.size());
+            adapter.updateList(repos);
         });
     }
 
@@ -63,6 +69,12 @@ public class RepoFragment extends Fragment {
         binding.reposRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         adapter = new RepoAdapter(getContext(), reposList);
         binding.reposRecyclerView.setAdapter(adapter);
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        binding = null;
     }
 
 }

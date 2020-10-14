@@ -34,9 +34,10 @@ public class RepoAdapter extends RecyclerView.Adapter<RepoAdapter.RepoViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull RepoViewHolder holder, int position) {
-        holder.itemBinding.repoName.setText(mList.get(position).getOwnerName());
+        holder.itemBinding.repoName.setText(mList.get(position).getRepoName());
+        holder.itemBinding.repoOwnerUsername.setText(mList.get(position).getOwnerName());
         Glide.with(mContext).load(mList.get(position).getOwnerAvatar())
-                .into(holder.itemBinding.repoImage);
+                .into(holder.itemBinding.repoOwnerAvatar);
     }
 
     @Override
