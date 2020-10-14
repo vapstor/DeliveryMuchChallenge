@@ -1,57 +1,56 @@
 package br.com.dmchallenge.ui.login;
 
+import android.animation.LayoutTransition;
 import android.app.Activity;
-
-import androidx.lifecycle.Observer;
-import androidx.lifecycle.ViewModelProviders;
-
 import android.os.Bundle;
-
-import androidx.annotation.Nullable;
-import androidx.annotation.StringRes;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.StringRes;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
+
 import br.com.dmchallenge.R;
-import br.com.dmchallenge.ui.login.LoginViewModel;
-import br.com.dmchallenge.ui.login.LoginViewModelFactory;
+import br.com.dmchallenge.databinding.ActivityLoginBinding;
 
 public class LoginActivity extends AppCompatActivity {
 
     private LoginViewModel loginViewModel;
+    private ActivityLoginBinding binding;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_login);
-        loginViewModel = ViewModelProviders.of(this, new LoginViewModelFactory())
-                .get(LoginViewModel.class);
 
-        final EditText usernameEditText = findViewById(R.id.username);
-        final EditText passwordEditText = findViewById(R.id.password);
-        final Button loginButton = findViewById(R.id.login);
-        final ProgressBar loadingProgressBar = findViewById(R.id.loading);
+        binding = ActivityLoginBinding.inflate(getLayoutInflater());
+        View view = binding.getRoot();
+        setContentView(view);
+
+        //Para animação suave do teclado (setar na raiz do xml correspondente "animateLayoutChanges=true")
+        LayoutTransition layoutTransition = binding.rootLoginScrollview.getLayoutTransition();
+        layoutTransition.enableTransitionType(LayoutTransition.CHANGING);
+
+        loginViewModel = new ViewModelProvider(this, new LoginViewModelFactory()).get(LoginViewModel.class);
 
         loginViewModel.getLoginFormState().observe(this, loginFormState -> {
             if (loginFormState == null) {
                 return;
             }
-            loginButton.setEnabled(loginFormState.isDataValid());
+            binding.btnLogin.setEnabled(loginFormState.isDataValid());
             if (loginFormState.getUsernameError() != null) {
-                usernameEditText.setError(getString(loginFormState.getUsernameError()));
+                binding.usernameLayout.setErrorEnabled(true);
+                binding.usernameLayout.setError(getString(loginFormState.getUsernameError()));
+            } else {
+                binding.usernameLayout.setErrorEnabled(false);
             }
             if (loginFormState.getPasswordError() != null) {
-                passwordEditText.setError(getString(loginFormState.getPasswordError()));
+                binding.passwordLayout.setErrorEnabled(true);
+                binding.passwordLayout.setError(getString(loginFormState.getPasswordError()));
+            } else {
+                binding.passwordLayout.setErrorEnabled(false);
             }
         });
 
@@ -59,7 +58,7 @@ public class LoginActivity extends AppCompatActivity {
             if (loginResult == null) {
                 return;
             }
-            loadingProgressBar.setVisibility(View.GONE);
+            binding.loading.setVisibility(View.GONE);
             if (loginResult.getError() != null) {
                 showLoginFailed(loginResult.getError());
             }
@@ -85,24 +84,23 @@ public class LoginActivity extends AppCompatActivity {
 
             @Override
             public void afterTextChanged(Editable s) {
-                loginViewModel.loginDataChanged(usernameEditText.getText().toString(),
-                        passwordEditText.getText().toString());
+                loginViewModel.loginDataChanged(binding.username.getText().toString(),
+                        binding.password.getText().toString());
             }
         };
-        usernameEditText.addTextChangedListener(afterTextChangedListener);
-        passwordEditText.addTextChangedListener(afterTextChangedListener);
-        passwordEditText.setOnEditorActionListener((v, actionId, event) -> {
+
+        binding.username.addTextChangedListener(afterTextChangedListener);
+        binding.password.addTextChangedListener(afterTextChangedListener);
+        binding.password.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_DONE) {
-                loginViewModel.login(usernameEditText.getText().toString(),
-                        passwordEditText.getText().toString());
+                loginViewModel.login(binding.username.getText().toString(), binding.password.getText().toString());
             }
             return false;
         });
 
-        loginButton.setOnClickListener(v -> {
-            loadingProgressBar.setVisibility(View.VISIBLE);
-            loginViewModel.login(usernameEditText.getText().toString(),
-                    passwordEditText.getText().toString());
+        binding.btnLogin.setOnClickListener(v -> {
+            binding.loading.setVisibility(View.VISIBLE);
+            loginViewModel.login(binding.username.getText().toString(), binding.password.getText().toString());
         });
     }
 

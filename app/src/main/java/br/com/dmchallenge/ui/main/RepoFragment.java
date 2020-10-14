@@ -54,7 +54,7 @@ public class RepoFragment extends Fragment {
 
     private void setUpItemTouchHelper() {
         ItemClickSupport.addTo(binding.reposRecyclerView).setOnItemClickListener((recyclerView, position, v) -> {
-            Toast.makeText(getContext(), "Elemento " + position + " Clidado!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "Elemento " + position + " Clicado!", Toast.LENGTH_SHORT).show();
         });
     }
 
