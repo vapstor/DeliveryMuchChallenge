@@ -21,4 +21,9 @@ public class RepoViewModel extends ViewModel {
         this.repository = repository;
 //        reposList = repository.getAlphabetizedRepos();
     }
+
+    public MutableLiveData<ArrayList<Repo>> getReposList() {
+        return reposList;
+    }
+
 }
