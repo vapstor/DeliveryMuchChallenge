@@ -1,4 +1,4 @@
-package br.com.dmchallenge.data;
+package br.com.dmchallenge.model;
 
 /**
  * A generic class that holds a result success w/ data or an error exception.

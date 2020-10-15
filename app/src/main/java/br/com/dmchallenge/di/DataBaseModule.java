@@ -6,8 +6,9 @@ import androidx.room.Room;
 
 import javax.inject.Singleton;
 
+import br.com.dmchallenge.room.MyRoomDatabase;
 import br.com.dmchallenge.room.RepoDAO;
-import br.com.dmchallenge.room.RepoRoomDatabase;
+import br.com.dmchallenge.room.UserDAO;
 import dagger.Module;
 import dagger.Provides;
 import dagger.hilt.InstallIn;
@@ -19,17 +20,20 @@ public class DataBaseModule {
 
     @Provides
     @Singleton
-    public static RepoRoomDatabase provideRepoDB(Application application) {
-        return Room.databaseBuilder(application, RepoRoomDatabase.class, "repo_database")
-                .fallbackToDestructiveMigration()
-                .allowMainThreadQueries()
-                .build();
+    public static MyRoomDatabase provideAppDB(Application application) {
+        return MyRoomDatabase.getDatabase(application.getApplicationContext());
     }
 
     @Provides
     @Singleton
-    public static RepoDAO providePokeDao(RepoRoomDatabase repoRoomDatabase) {
-        return repoRoomDatabase.repoDAO();
+    public static RepoDAO provideRepoDao(MyRoomDatabase myRoomDatabase) {
+        return myRoomDatabase.repoDAO();
+    }
+
+    @Provides
+    @Singleton
+    public static UserDAO provideUserDao(MyRoomDatabase myRoomDatabase) {
+        return myRoomDatabase.userDAO();
     }
 }
 
