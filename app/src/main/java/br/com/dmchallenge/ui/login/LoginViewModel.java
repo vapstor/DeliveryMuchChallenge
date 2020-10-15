@@ -22,17 +22,13 @@ import okhttp3.ResponseBody;
 public class LoginViewModel extends ViewModel {
     private final String TAG = "LoginViewModel";
     private Repository repository;
-    private MutableLiveData<LoginFormState> loginFormState = new MutableLiveData<>();
     private MutableLiveData<AuthResult> authResult = new MutableLiveData<>();
-    private MutableLiveData<LoggedInUser> loggedInUser = new MutableLiveData<>();
+    private MutableLiveData<LoggedInUser> loggedInUser;
 
     @ViewModelInject
     public LoginViewModel(Repository repository) {
         this.repository = repository;
-    }
-
-    LiveData<LoginFormState> getLoginFormState() {
-        return loginFormState;
+        this.loggedInUser = this.repository.getLoggedInUserLiveData();
     }
 
     LiveData<AuthResult> getAuthResult() {
@@ -40,7 +36,12 @@ public class LoginViewModel extends ViewModel {
     }
 
     MutableLiveData<LoggedInUser> getLoggedInUser() {
-        return loggedInUser;
+        return this.loggedInUser;
+    }
+
+    //Atualizando o usuario logado na classe repositorio via DI e livedata
+    void setLoggedinUser(LoggedInUser user) {
+        this.loggedInUser.setValue(user);
     }
 
     public void auth(String CLIENT_ID, String CLIENT_SECRET, String code) {
@@ -79,16 +80,6 @@ public class LoginViewModel extends ViewModel {
                 );
     }
 
-    public void loginDataChanged(String username, String password) {
-        if (!isUserNameValid(username)) {
-            loginFormState.setValue(new LoginFormState(R.string.invalid_username, null));
-        } else if (!isPasswordValid(password)) {
-            loginFormState.setValue(new LoginFormState(null, R.string.invalid_password));
-        } else {
-            loginFormState.setValue(new LoginFormState(true));
-        }
-    }
-
     // A placeholder username validation check
     private boolean isUserNameValid(String username) {
         if (username == null) {
@@ -106,28 +97,22 @@ public class LoginViewModel extends ViewModel {
         return password != null && password.trim().length() > 5;
     }
 
-    public void fetchLoggedUserInformation() {
+    public void fetchLoggedUserInformation(LoggedInUser user) {
         this.repository.fetchLoggedUserInfo()
                 .subscribeOn(Schedulers.io())
                 .map(new Function<ResponseBody, LoggedInUser>() {
-                         @Override
-                         public LoggedInUser apply(ResponseBody body) throws Throwable {
-                             JSONObject json = new JSONObject(body.string());
-                             Log.d(TAG, "Sucesso");
-                             LoggedInUser user = getLoggedInUser().getValue();
-                             if (user != null) {
-                                 user.setUserId(json.getString("id"));
-                                 user.setDisplayName(json.getString("name"));
-                                 user.setEmail(json.getString("email"));
-                                 user.setUsername(json.getString("login"));
-                                 user.setAvatarUrl(json.getString("avatar_url"));
-                                 return user;
-                             } else {
-                                 throw new Exception("Erro na configuração do usuário");
-                             }
-                         }
-                     }
-                )
+                    @Override
+                    public LoggedInUser apply(ResponseBody body) throws Throwable {
+                        JSONObject json = new JSONObject(body.string());
+                        Log.d(TAG, "Sucesso");
+                        user.setUserId(json.getString("id"));
+                        user.setDisplayName(json.getString("name"));
+                        user.setEmail(json.getString("email"));
+                        user.setUsername(json.getString("login"));
+                        user.setAvatarUrl(json.getString("avatar_url"));
+                        return user;
+                    }
+                })
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(result -> loggedInUser.setValue(result),
                         error -> {

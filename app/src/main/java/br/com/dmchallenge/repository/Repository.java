@@ -5,9 +5,6 @@ import android.app.Application;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
-import org.json.JSONObject;
-
-import java.net.ResponseCache;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -22,7 +19,6 @@ import br.com.dmchallenge.room.MyRoomDatabase;
 import br.com.dmchallenge.room.RepoDAO;
 import br.com.dmchallenge.room.UserDAO;
 import io.reactivex.rxjava3.core.Observable;
-import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 import static br.com.dmchallenge.utils.Constants.MY_UNGUESSABLE_STRING;
@@ -70,7 +66,10 @@ public class Repository {
         accessTokenLiveData.setValue(token);
     }
 
-    public LiveData<LoggedInUser> getLoggedInUserLiveData() {
+    public MutableLiveData<LoggedInUser> getLoggedInUserLiveData() {
+        if (loggedInUserLiveData == null) {
+            loggedInUserLiveData = new MutableLiveData<>();
+        }
         return loggedInUserLiveData;
     }
 
@@ -83,7 +82,7 @@ public class Repository {
     }
 
     public Observable<AccessToken> getAccessToken(String clientId, String clientSecret, String code) {
-        return authService.getAccessToken(clientId, clientSecret, code, REDIRECT_URI,MY_UNGUESSABLE_STRING);
+        return authService.getAccessToken(clientId, clientSecret, code, REDIRECT_URI, MY_UNGUESSABLE_STRING);
     }
 
     public Observable<ResponseBody> fetchLoggedUserInfo() {

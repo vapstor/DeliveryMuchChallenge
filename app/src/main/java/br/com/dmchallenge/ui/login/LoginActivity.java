@@ -1,21 +1,18 @@
 package br.com.dmchallenge.ui.login;
 
 import android.animation.LayoutTransition;
-import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
-import android.util.Log;
 import android.view.View;
-import android.view.inputmethod.EditorInfo;
+import android.view.ViewGroup;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.transition.Fade;
+import androidx.transition.TransitionManager;
 
 import br.com.dmchallenge.R;
 import br.com.dmchallenge.activity.MainActivity;
@@ -27,7 +24,6 @@ import static br.com.dmchallenge.utils.Constants.CLIENT_ID;
 import static br.com.dmchallenge.utils.Constants.CLIENT_SECRET;
 import static br.com.dmchallenge.utils.Constants.MY_UNGUESSABLE_STRING;
 import static br.com.dmchallenge.utils.Constants.REDIRECT_URI;
-import static br.com.dmchallenge.utils.Constants.REQUEST_GITHUB_LOGIN;
 
 @AndroidEntryPoint
 public class LoginActivity extends AppCompatActivity {
@@ -48,31 +44,10 @@ public class LoginActivity extends AppCompatActivity {
 
         loginViewModel = new ViewModelProvider(this).get(LoginViewModel.class);
 
-        loginViewModel.getLoginFormState().observe(this, loginFormState -> {
-            if (loginFormState == null) {
-                return;
-            }
-            binding.btnLogin.setEnabled(loginFormState.isDataValid());
-            if (loginFormState.getUsernameError() != null) {
-                binding.usernameLayout.setErrorEnabled(true);
-                binding.usernameLayout.setError(getString(loginFormState.getUsernameError()));
-            } else {
-                binding.usernameLayout.setErrorEnabled(false);
-            }
-            if (loginFormState.getPasswordError() != null) {
-                binding.passwordLayout.setErrorEnabled(true);
-                binding.passwordLayout.setError(getString(loginFormState.getPasswordError()));
-            } else {
-                binding.passwordLayout.setErrorEnabled(false);
-            }
-        });
-
         loginViewModel.getLoggedInUser().observe(this, user -> {
-            if(binding.loading.getVisibility() == View.VISIBLE) {
-                binding.loading.setVisibility(View.GONE);
-            }
+            toggleButtonAndProgressBar(false);
             if (user != null) {
-                //updateUiWithUser(loggedInUser);
+                startActivity(new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
             } else {
                 showLoginFailed(R.string.login_falhou);
             }
@@ -86,71 +61,57 @@ public class LoginActivity extends AppCompatActivity {
                 showLoginFailed(authResult.getError());
             }
             if (authResult.getSuccess() != null) {
-//                LoggedInUser loggedInUser = authResult.getSuccess();
-                fetchUserInformation();
+                fetchUserInformation(authResult.getSuccess());
             }
-            setResult(Activity.RESULT_OK);
-        });
-
-        TextWatcher afterTextChangedListener = new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                // ignore
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // ignore
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                loginViewModel.loginDataChanged(binding.username.getText().toString(),
-                        binding.password.getText().toString());
-            }
-        };
-
-        binding.username.addTextChangedListener(afterTextChangedListener);
-        binding.password.addTextChangedListener(afterTextChangedListener);
-        binding.password.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_DONE) {
-//                loginViewModel.login();
-            }
-            return false;
         });
 
         binding.btnLogin.setOnClickListener(v -> {
-            binding.loading.setVisibility(View.VISIBLE);
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/login/oauth/authorize" + "?client_id=" + CLIENT_ID + "&scope=repo&state=" + MY_UNGUESSABLE_STRING + "&redirect_uri=" + REDIRECT_URI)).setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            startActivityForResult(intent, REQUEST_GITHUB_LOGIN);
+            toggleButtonAndProgressBar(true);
+            Intent intent =
+                    new Intent(Intent.ACTION_VIEW,
+                            Uri.parse("https://github.com/login/oauth/authorize"
+                                    + "?client_id=" + CLIENT_ID
+                                    + "&scope=repo"
+                                    + "&state=" + MY_UNGUESSABLE_STRING
+                                    + "&redirect_uri=" + REDIRECT_URI
+                            )).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
         });
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode == REQUEST_GITHUB_LOGIN) {
-            if(resultCode == Activity.RESULT_OK) {
-                Uri uri = getIntent().getData();
-                if (uri != null && uri.toString().startsWith(REDIRECT_URI)) {
-                    String token = uri.getQueryParameter("code");
-                    loginViewModel.auth(CLIENT_ID, CLIENT_SECRET, token);
-                }
+    protected void onResume() {
+        super.onResume();
+        Uri uri = getIntent().getData();
+        if (uri != null && uri.toString().startsWith(REDIRECT_URI)) {
+            /**Workaround para não resetar estado na tela ao voltar*/
+            if (binding.loading.getVisibility() != View.VISIBLE) {
+                toggleButtonAndProgressBar(true);
             }
+            String token = uri.getQueryParameter("code");
+            loginViewModel.auth(CLIENT_ID, CLIENT_SECRET, token);
         }
     }
 
-    private void updateUiWithUser(LoggedInUser user) {
-        String welcome = getString(R.string.bem_vindo) + user.getDisplayName();
-        Toast.makeText(getApplicationContext(), welcome, Toast.LENGTH_LONG).show();
-        startActivity(new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK));
-    }
-
-    private void fetchUserInformation() {
-        loginViewModel.fetchLoggedUserInformation();
+    private void fetchUserInformation(LoggedInUser user) {
+        loginViewModel.fetchLoggedUserInformation(user);
     }
 
     private void showLoginFailed(@StringRes Integer errorString) {
         Toast.makeText(getApplicationContext(), errorString, Toast.LENGTH_SHORT).show();
+    }
+
+    private void toggleButtonAndProgressBar(boolean isLoading) {
+        final ViewGroup root = binding.rootLoginScrollview;
+        TransitionManager.beginDelayedTransition(root, new Fade());
+        if (isLoading) {
+            binding.loading.setVisibility(View.VISIBLE);
+            binding.btnAnonimo.setVisibility(View.INVISIBLE);
+            binding.btnLogin.setVisibility(View.INVISIBLE);
+        } else {
+            binding.loading.setVisibility(View.INVISIBLE);
+            binding.btnAnonimo.setVisibility(View.VISIBLE);
+            binding.btnLogin.setVisibility(View.VISIBLE);
+        }
     }
 }
